@@ -1,0 +1,181 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://json-render.dev/schemas/mcp.config.schema.json",
+  "title": "MCP Configuration",
+  "description": "Configuration for @onegenui/mcp servers and tool selection",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference for IDE support"
+    },
+    "servers": {
+      "type": "object",
+      "description": "MCP server configurations keyed by server ID",
+      "additionalProperties": {
+        "$ref": "#/definitions/ServerConfig"
+      }
+    },
+    "selection": {
+      "$ref": "#/definitions/SelectionConfig"
+    },
+    "connection": {
+      "$ref": "#/definitions/ConnectionConfig"
+    }
+  },
+  "required": ["servers"],
+  "definitions": {
+    "ServerConfig": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Human-readable server name"
+        },
+        "transport": {
+          "type": "string",
+          "enum": ["stdio", "http", "local"],
+          "description": "Transport protocol"
+        },
+        "command": {
+          "type": "string",
+          "description": "Command to spawn (stdio transport)"
+        },
+        "args": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Command arguments (stdio transport)"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Server URL (http transport)"
+        },
+        "module": {
+          "type": "string",
+          "description": "Module path or package name (local transport)"
+        },
+        "toolsetExport": {
+          "type": "string",
+          "description": "Export name that contains the toolset (local transport)"
+        },
+        "env": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Environment variables for stdio process"
+        },
+        "domain": {
+          "$ref": "#/definitions/McpDomain"
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Tags for tool selection"
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether this server is active"
+        },
+        "timeout": {
+          "type": "integer",
+          "default": 30000,
+          "description": "Request timeout in milliseconds"
+        }
+      },
+      "required": ["transport"],
+      "allOf": [
+        {
+          "if": {
+            "properties": { "transport": { "const": "stdio" } }
+          },
+          "then": {
+            "required": ["command"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "transport": { "const": "http" } }
+          },
+          "then": {
+            "required": ["url"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "transport": { "const": "local" } }
+          },
+          "then": {
+            "required": ["module"]
+          }
+        }
+      ]
+    },
+    "McpDomain": {
+      "type": "string",
+      "enum": [
+        "files",
+        "vcs",
+        "web",
+        "data",
+        "ops",
+        "comm",
+        "finance",
+        "security",
+        "ai",
+        "travel",
+        "custom"
+      ],
+      "description": "Semantic domain for tool categorization"
+    },
+    "SelectionConfig": {
+      "type": "object",
+      "properties": {
+        "maxToolsPerRequest": {
+          "type": "integer",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 50,
+          "description": "Maximum tools to include per LLM request"
+        },
+        "strategy": {
+          "type": "string",
+          "enum": ["keyword", "semantic"],
+          "default": "keyword",
+          "description": "Tool selection algorithm"
+        },
+        "priorityDomains": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/McpDomain" },
+          "description": "Domains to prioritize in selection"
+        }
+      }
+    },
+    "ConnectionConfig": {
+      "type": "object",
+      "properties": {
+        "strategy": {
+          "type": "string",
+          "enum": ["persistent", "on-demand", "pooled"],
+          "default": "persistent",
+          "description": "Connection lifecycle strategy"
+        },
+        "healthCheckInterval": {
+          "type": "integer",
+          "default": 60000,
+          "description": "Health check interval in ms (persistent only)"
+        },
+        "maxIdleTime": {
+          "type": "integer",
+          "default": 300000,
+          "description": "Max idle time before disconnect (pooled only)"
+        },
+        "reconnectAttempts": {
+          "type": "integer",
+          "default": 3,
+          "description": "Reconnection attempts on failure"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "name": "@onegenui/mcp",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "description": "Model Context Protocol (MCP) integration for json-render. Connect AI-generated UIs to external tools and data sources.",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "ai",
+    "tools",
+    "llm",
+    "json-render",
+    "ai-sdk"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/g97iulio1609/Oneui-generate.git",
+    "directory": "packages/mcp"
+  },
+  "homepage": "https://github.com/g97iulio1609/Oneui-generate#readme",
+  "bugs": {
+    "url": "https://github.com/g97iulio1609/Oneui-generate/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/client/index.d.ts",
+      "import": "./dist/client/index.mjs",
+      "require": "./dist/client/index.js"
+    },
+    "./integration": {
+      "types": "./dist/integration/index.d.ts",
+      "import": "./dist/integration/index.mjs",
+      "require": "./dist/integration/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "mcp.schema.json"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "zod-to-json-schema": "^3.24.0"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "^25.0.9",
+    "ai": "^6.0.39",
+    "chokidar": "^4.0.0",
+    "tsup": "^8.0.2",
+    "typescript": "^5.4.5"
+  },
+  "peerDependencies": {
+    "ai": "^5.0.0 || ^6.0.0",
+    "zod": "^4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "ai": {
+      "optional": true
+    }
+  }
+}
