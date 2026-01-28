@@ -12,23 +12,23 @@
 [34mCJS[39m Build start
 [34mESM[39m Build start
 [32mCJS[39m [1mdist/client/index.js          [22m[32m15.39 KB[39m
-[32mCJS[39m [1mdist/index.js                 [22m[32m25.06 KB[39m
 [32mCJS[39m [1mdist/integration/index.js     [22m[32m7.30 KB[39m
+[32mCJS[39m [1mdist/index.js                 [22m[32m25.06 KB[39m
+[32mCJS[39m [1mdist/integration/index.js.map [22m[32m14.81 KB[39m
 [32mCJS[39m [1mdist/client/index.js.map      [22m[32m31.55 KB[39m
 [32mCJS[39m [1mdist/index.js.map             [22m[32m61.75 KB[39m
-[32mCJS[39m [1mdist/integration/index.js.map [22m[32m14.81 KB[39m
-[32mCJS[39m ⚡️ Build success in 78ms
+[32mCJS[39m ⚡️ Build success in 278ms
 [32mESM[39m [1mdist/index.mjs                 [22m[32m22.19 KB[39m
+[32mESM[39m [1mdist/chunk-VOMRNL7O.mjs        [22m[32m1.31 KB[39m
 [32mESM[39m [1mdist/client/index.mjs          [22m[32m13.05 KB[39m
 [32mESM[39m [1mdist/integration/index.mjs     [22m[32m5.91 KB[39m
-[32mESM[39m [1mdist/chunk-VOMRNL7O.mjs        [22m[32m1.31 KB[39m
+[32mESM[39m [1mdist/chunk-VOMRNL7O.mjs.map    [22m[32m2.64 KB[39m
 [32mESM[39m [1mdist/index.mjs.map             [22m[32m57.13 KB[39m
 [32mESM[39m [1mdist/client/index.mjs.map      [22m[32m28.69 KB[39m
 [32mESM[39m [1mdist/integration/index.mjs.map [22m[32m14.35 KB[39m
-[32mESM[39m [1mdist/chunk-VOMRNL7O.mjs.map    [22m[32m2.64 KB[39m
-[32mESM[39m ⚡️ Build success in 81ms
+[32mESM[39m ⚡️ Build success in 280ms
 DTS Build start
-DTS ⚡️ Build success in 2119ms
+DTS ⚡️ Build success in 4887ms
 DTS dist/index.d.ts                10.11 KB
 DTS dist/client/index.d.ts         439.00 B
 DTS dist/integration/index.d.ts    3.48 KB
