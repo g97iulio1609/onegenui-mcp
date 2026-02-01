@@ -1,5 +1,6 @@
 // src/integration/ai-sdk.ts
 import { tool, jsonSchema } from "ai";
+var DEBUG = process.env.NODE_ENV === "development";
 function convertToAiSdkSchema(mcpSchema) {
   return jsonSchema(mcpSchema);
 }
@@ -11,34 +12,21 @@ function createAiSdkTool(mcpTool, serverId, connectionManager) {
       mcpTool.inputSchema ?? { type: "object" }
     ),
     execute: async (args) => {
-      console.log(`[MCP Tool] Calling: ${toolName}`, args);
+      if (DEBUG) console.log(`[MCP Tool] Calling: ${toolName}`, args);
       try {
         const client = await connectionManager.getClient(serverId);
-        console.log(`[MCP Tool] Got client for ${serverId}, calling tool...`);
         const result = await client.callTool(
           toolName,
           args
         );
-        console.log(`[MCP Tool] Result received for ${toolName}`);
-        console.log(`[MCP Tool] Result content count:`, result.content?.length);
         if (result.structuredContent !== void 0) {
-          console.log(`[MCP Tool] Using structuredContent`);
           return result.structuredContent;
         }
         const textContent = result.content.filter((c) => c.type === "text").map((c) => c.text).join("\n");
-        console.log(`[MCP Tool] Extracted text length:`, textContent?.length);
         if (textContent) {
           try {
-            const parsed = JSON.parse(textContent);
-            console.log(
-              `[MCP Tool] Parsed JSON successfully, items:`,
-              Array.isArray(parsed) ? parsed.length : "object"
-            );
-            return parsed;
+            return JSON.parse(textContent);
           } catch {
-            console.log(
-              `[MCP Tool] Text is not valid JSON, returning as string`
-            );
             return textContent;
           }
         }

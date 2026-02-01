@@ -7,6 +7,8 @@ import { tool, jsonSchema, type ToolSet, type JSONSchema7 } from "ai";
 // AI SDK Integration
 // =============================================================================
 
+const DEBUG = process.env.NODE_ENV === "development";
+
 /**
  * Tool execution context.
  */
@@ -41,12 +43,11 @@ function createAiSdkTool(
       (mcpTool.inputSchema as Record<string, unknown>) ?? { type: "object" },
     ),
     execute: async (args) => {
-      console.log(`[MCP Tool] Calling: ${toolName}`, args);
+      if (DEBUG) console.log(`[MCP Tool] Calling: ${toolName}`, args);
 
       try {
         // Get client (connects if needed)
         const client = await connectionManager.getClient(serverId);
-        console.log(`[MCP Tool] Got client for ${serverId}, calling tool...`);
 
         // Call the tool
         const result = await client.callTool(
@@ -54,12 +55,8 @@ function createAiSdkTool(
           args as Record<string, unknown>,
         );
 
-        console.log(`[MCP Tool] Result received for ${toolName}`);
-        console.log(`[MCP Tool] Result content count:`, result.content?.length);
-
         // Return structured content if available
         if (result.structuredContent !== undefined) {
-          console.log(`[MCP Tool] Using structuredContent`);
           return result.structuredContent;
         }
 
@@ -69,22 +66,12 @@ function createAiSdkTool(
           .map((c) => (c as { type: "text"; text: string }).text)
           .join("\n");
 
-        console.log(`[MCP Tool] Extracted text length:`, textContent?.length);
-
         // Try to parse as JSON for better model consumption
         if (textContent) {
           try {
-            const parsed = JSON.parse(textContent);
-            console.log(
-              `[MCP Tool] Parsed JSON successfully, items:`,
-              Array.isArray(parsed) ? parsed.length : "object",
-            );
-            return parsed;
+            return JSON.parse(textContent);
           } catch {
             // Not valid JSON, return as-is
-            console.log(
-              `[MCP Tool] Text is not valid JSON, returning as string`,
-            );
             return textContent;
           }
         }
