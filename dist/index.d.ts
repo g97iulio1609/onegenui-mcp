@@ -310,4 +310,57 @@ declare function getToolsByDomain(serverStates: Map<string, McpServerState> | Re
     serverId: string;
 }[];
 
-export { type DefineMcpPromptConfig, type DefineMcpServerConfig, type DefineMcpToolConfig, type InferToolParams, JsonSchema, McpDomain, McpPromptArgument, McpPromptDefinition, McpServerConfig, McpServerState, McpToolDefinition, McpToolWireFormat, ScoredTool, ToolSelectionContext, ToolSelectionOptions, type ZodToMcpSchemaOptions, defineMcpPrompt, defineMcpServer, defineMcpTool, emptyInputSchema, extractSchemaMetadata, extractToolMetadata, getAllTools, getToolsByDomain, mergeSchemas, resolveEnvVars, resolveServerEnv, selectToolsForPrompt, toolFromWireFormat, validateMcpSchema, zodToMcpSchema };
+/**
+ * MCP Security Module
+ *
+ * Provides security controls for MCP command execution:
+ * - Command whitelist validation
+ * - Path sanitization
+ * - Environment variable sandboxing
+ * - Timeout enforcement
+ */
+/**
+ * Allowed commands for stdio transport
+ * Only these commands can be executed via MCP
+ */
+declare const ALLOWED_COMMANDS: Set<string>;
+interface SecurityValidationResult {
+    valid: boolean;
+    error?: string;
+}
+/**
+ * Validate a command for MCP execution
+ */
+declare function validateCommand(command: string): SecurityValidationResult;
+/**
+ * Validate command arguments
+ */
+declare function validateArgs(args: string[]): SecurityValidationResult;
+/**
+ * Sanitize environment variables for subprocess
+ * Only allows safe variables
+ */
+declare function sanitizeEnv(env?: Record<string, string>): Record<string, string>;
+/**
+ * Default timeout for tool calls (30 seconds)
+ */
+declare const DEFAULT_TOOL_TIMEOUT_MS = 30000;
+/**
+ * Maximum timeout for tool calls (5 minutes)
+ */
+declare const MAX_TOOL_TIMEOUT_MS: number;
+/**
+ * Validate timeout value
+ */
+declare function validateTimeout(timeoutMs?: number): number;
+/**
+ * Add a command to the allowed list at runtime
+ * Use with caution - should only be called during app initialization
+ */
+declare function allowCommand(command: string): void;
+/**
+ * Check if a command is allowed
+ */
+declare function isCommandAllowed(command: string): boolean;
+
+export { ALLOWED_COMMANDS, DEFAULT_TOOL_TIMEOUT_MS, type DefineMcpPromptConfig, type DefineMcpServerConfig, type DefineMcpToolConfig, type InferToolParams, JsonSchema, MAX_TOOL_TIMEOUT_MS, McpDomain, McpPromptArgument, McpPromptDefinition, McpServerConfig, McpServerState, McpToolDefinition, McpToolWireFormat, ScoredTool, type SecurityValidationResult, ToolSelectionContext, ToolSelectionOptions, type ZodToMcpSchemaOptions, allowCommand, defineMcpPrompt, defineMcpServer, defineMcpTool, emptyInputSchema, extractSchemaMetadata, extractToolMetadata, getAllTools, getToolsByDomain, isCommandAllowed, mergeSchemas, resolveEnvVars, resolveServerEnv, sanitizeEnv, selectToolsForPrompt, toolFromWireFormat, validateArgs, validateCommand, validateMcpSchema, validateTimeout, zodToMcpSchema };

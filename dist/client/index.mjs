@@ -1,6 +1,10 @@
 import {
-  resolveServerEnv
-} from "../chunk-VOMRNL7O.mjs";
+  resolveServerEnv,
+  sanitizeEnv,
+  validateArgs,
+  validateCommand,
+  validateTimeout
+} from "../chunk-P6ZLD7I5.mjs";
 
 // src/client/local-client.ts
 var localModuleLoaders = /* @__PURE__ */ new Map();
@@ -93,7 +97,7 @@ function createLocalClient(config) {
         inputSchema: tool.inputSchema ?? { type: "object" }
       }));
     },
-    async callTool(name, args) {
+    async callTool(name, args, _options) {
       const tools = await ensureToolset();
       const tool = tools[name];
       if (!tool?.execute) {
@@ -147,10 +151,24 @@ function createSdkClient(config) {
       });
       let transport;
       if (config.transport === "stdio") {
+        const commandValidation = validateCommand(config.command);
+        if (!commandValidation.valid) {
+          throw new Error(
+            `MCP Security: ${commandValidation.error}`
+          );
+        }
+        if (config.args) {
+          const argsValidation = validateArgs(config.args);
+          if (!argsValidation.valid) {
+            throw new Error(
+              `MCP Security: ${argsValidation.error}`
+            );
+          }
+        }
         transport = new StdioClientTransport({
           command: config.command,
           args: config.args,
-          env: config.env,
+          env: sanitizeEnv(config.env),
           cwd: config.cwd
         });
       } else if (config.transport === "http") {
@@ -186,11 +204,18 @@ function createSdkClient(config) {
         inputSchema: tool.inputSchema
       }));
     },
-    async callTool(name, args) {
+    async callTool(name, args, options) {
       if (!sdkClient || !isConnected) {
         throw new Error("Client not connected");
       }
-      const result = await sdkClient.callTool({ name, arguments: args });
+      const timeoutMs = validateTimeout(options?.timeoutMs);
+      const callPromise = sdkClient.callTool({ name, arguments: args });
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error(`MCP tool '${name}' timed out after ${timeoutMs}ms`));
+        }, timeoutMs);
+      });
+      const result = await Promise.race([callPromise, timeoutPromise]);
       return {
         content: result.content.map((c) => {
           if (c.type === "text") {

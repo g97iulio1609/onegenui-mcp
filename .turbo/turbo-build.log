@@ -2,7 +2,7 @@
 > @onegenui/mcp@0.1.0 build /Users/giulioleone/Sviluppo/genUi/json-render/packages/mcp
 > tsup
 
-CLI Building entry: src/index.ts, src/integration/index.ts, src/client/index.ts
+CLI Building entry: src/index.ts, src/client/index.ts, src/integration/index.ts
 CLI Using tsconfig: tsconfig.json
 CLI tsup v8.5.1
 CLI Using tsup config: /Users/giulioleone/Sviluppo/genUi/json-render/packages/mcp/tsup.config.ts
@@ -10,31 +10,31 @@ CLI Target: es2022
 CLI Cleaning output folder
 CJS Build start
 ESM Build start
-ESM dist/chunk-VOMRNL7O.mjs        1.31 KB
-ESM dist/index.mjs                 22.19 KB
-ESM dist/client/index.mjs          13.05 KB
-ESM dist/integration/index.mjs     5.31 KB
-ESM dist/chunk-VOMRNL7O.mjs.map    2.64 KB
-ESM dist/client/index.mjs.map      28.69 KB
-ESM dist/index.mjs.map             57.13 KB
-ESM dist/integration/index.mjs.map 13.50 KB
-ESM ⚡️ Build success in 60ms
-CJS dist/index.js                 25.06 KB
 CJS dist/integration/index.js     6.70 KB
-CJS dist/client/index.js          15.39 KB
-CJS dist/index.js.map             61.75 KB
+CJS dist/client/index.js          18.95 KB
+CJS dist/index.js                 28.67 KB
 CJS dist/integration/index.js.map 13.96 KB
-CJS dist/client/index.js.map      31.55 KB
-CJS ⚡️ Build success in 60ms
+CJS dist/client/index.js.map      40.13 KB
+CJS dist/index.js.map             69.08 KB
+CJS ⚡️ Build success in 15ms
+ESM dist/index.mjs                 22.64 KB
+ESM dist/client/index.mjs          13.92 KB
+ESM dist/chunk-P6ZLD7I5.mjs        4.42 KB
+ESM dist/integration/index.mjs     5.31 KB
+ESM dist/client/index.mjs.map      30.58 KB
+ESM dist/index.mjs.map             57.33 KB
+ESM dist/chunk-P6ZLD7I5.mjs.map    9.49 KB
+ESM dist/integration/index.mjs.map 13.50 KB
+ESM ⚡️ Build success in 16ms
 DTS Build start
-DTS ⚡️ Build success in 2887ms
-DTS dist/index.d.ts                10.11 KB
-DTS dist/integration/index.d.ts    3.48 KB
+DTS ⚡️ Build success in 1845ms
+DTS dist/index.d.ts                11.67 KB
 DTS dist/client/index.d.ts         439.00 B
-DTS dist/connection-CtoHJQn2.d.ts  2.21 KB
+DTS dist/integration/index.d.ts    3.48 KB
+DTS dist/connection-B5X53Roh.d.ts  2.40 KB
 DTS dist/registry-BbMCFsfH.d.ts    12.03 KB
-DTS dist/index.d.mts               10.11 KB
-DTS dist/integration/index.d.mts   3.48 KB
+DTS dist/index.d.mts               11.67 KB
 DTS dist/client/index.d.mts        441.00 B
-DTS dist/connection-BL2HzUoc.d.mts 2.21 KB
+DTS dist/integration/index.d.mts   3.48 KB
+DTS dist/connection-DfoRTjiH.d.mts 2.40 KB
 DTS dist/registry-BbMCFsfH.d.mts   12.03 KB

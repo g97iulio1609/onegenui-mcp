@@ -15,6 +15,14 @@ import { createSdkClient } from "./sdk-client";
 export { registerLocalModuleLoader };
 
 /**
+ * Options for tool call execution
+ */
+export interface McpToolCallOptions {
+  /** Timeout in milliseconds (default: 30000, max: 300000) */
+  timeoutMs?: number;
+}
+
+/**
  * Wrapper around the MCP SDK client with simpler API.
  */
 export interface McpClient {
@@ -25,7 +33,11 @@ export interface McpClient {
   disconnect(): Promise<void>;
 
   listTools(): Promise<McpToolWireFormat[]>;
-  callTool(name: string, args: Record<string, unknown>): Promise<McpToolResult>;
+  callTool(
+    name: string,
+    args: Record<string, unknown>,
+    options?: McpToolCallOptions,
+  ): Promise<McpToolResult>;
 
   listPrompts(): Promise<McpPromptDefinition[]>;
   getPrompt(

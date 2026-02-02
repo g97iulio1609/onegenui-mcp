@@ -1,5 +1,5 @@
 import { S as ScoredTool, z as McpRegistry, g as McpToolWireFormat, e as McpServerState } from '../registry-BbMCFsfH.js';
-import { M as McpConnectionManager } from '../connection-CtoHJQn2.js';
+import { b as McpConnectionManager } from '../connection-B5X53Roh.js';
 import { ToolSet } from 'ai';
 import 'zod';
 

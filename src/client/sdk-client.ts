@@ -13,6 +13,13 @@ import type {
   McpResourceContent,
 } from "../types";
 import type { McpClient } from "./client";
+import {
+  validateCommand,
+  validateArgs,
+  sanitizeEnv,
+  validateTimeout,
+  DEFAULT_TOOL_TIMEOUT_MS,
+} from "../security";
 
 /**
  * Custom transport that avoids sending the mcp-protocol-version header.
@@ -52,10 +59,27 @@ export function createSdkClient(
       let transport;
 
       if (config.transport === "stdio") {
+        // Security: Validate command and args
+        const commandValidation = validateCommand(config.command);
+        if (!commandValidation.valid) {
+          throw new Error(
+            `MCP Security: ${commandValidation.error}`,
+          );
+        }
+        
+        if (config.args) {
+          const argsValidation = validateArgs(config.args);
+          if (!argsValidation.valid) {
+            throw new Error(
+              `MCP Security: ${argsValidation.error}`,
+            );
+          }
+        }
+        
         transport = new StdioClientTransport({
           command: config.command,
           args: config.args,
-          env: config.env,
+          env: sanitizeEnv(config.env),
           cwd: config.cwd,
         });
       } else if (config.transport === "http") {
@@ -99,12 +123,23 @@ export function createSdkClient(
     async callTool(
       name: string,
       args: Record<string, unknown>,
+      options?: { timeoutMs?: number },
     ): Promise<McpToolResult> {
       if (!sdkClient || !isConnected) {
         throw new Error("Client not connected");
       }
 
-      const result = await sdkClient.callTool({ name, arguments: args });
+      const timeoutMs = validateTimeout(options?.timeoutMs);
+      
+      // Wrap call with timeout
+      const callPromise = sdkClient.callTool({ name, arguments: args });
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error(`MCP tool '${name}' timed out after ${timeoutMs}ms`));
+        }, timeoutMs);
+      });
+      
+      const result = await Promise.race([callPromise, timeoutPromise]);
 
       return {
         content: (

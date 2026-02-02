@@ -161,7 +161,7 @@ function createLocalClient(config) {
         inputSchema: tool.inputSchema ?? { type: "object" }
       }));
     },
-    async callTool(name, args) {
+    async callTool(name, args, _options) {
       const tools = await ensureToolset();
       const tool = tools[name];
       if (!tool?.execute) {
@@ -193,6 +193,126 @@ function createLocalClient(config) {
 var import_client = require("@modelcontextprotocol/sdk/client/index.js");
 var import_stdio = require("@modelcontextprotocol/sdk/client/stdio.js");
 var import_streamableHttp = require("@modelcontextprotocol/sdk/client/streamableHttp.js");
+
+// src/security.ts
+var ALLOWED_COMMANDS = /* @__PURE__ */ new Set([
+  // Node.js
+  "node",
+  "npx",
+  "npm",
+  "pnpm",
+  "yarn",
+  "bun",
+  // Python
+  "python",
+  "python3",
+  "pip",
+  "pip3",
+  "uv",
+  "uvx",
+  // Other common runtimes
+  "deno",
+  "go",
+  "ruby",
+  // MCP-specific
+  "mcp-server-fetch",
+  "mcp-server-filesystem",
+  "mcp-server-sqlite"
+]);
+var BLOCKED_ENV_VARS = /* @__PURE__ */ new Set([
+  "PATH",
+  // Prevent PATH manipulation
+  "LD_PRELOAD",
+  "LD_LIBRARY_PATH",
+  "DYLD_INSERT_LIBRARIES",
+  "DYLD_LIBRARY_PATH"
+]);
+var ALLOWED_ENV_VARS = /* @__PURE__ */ new Set([
+  "NODE_ENV",
+  "HOME",
+  "USER",
+  "LANG",
+  "LC_ALL",
+  "TZ",
+  "HTTP_PROXY",
+  "HTTPS_PROXY",
+  "NO_PROXY"
+  // API keys are allowed (user's responsibility)
+]);
+function validateCommand(command) {
+  const parts = command.split(/\s+/);
+  const baseCommand = parts[0] ?? "";
+  const pathParts = baseCommand.split("/");
+  const commandName = pathParts[pathParts.length - 1] ?? baseCommand;
+  if (!ALLOWED_COMMANDS.has(commandName)) {
+    return {
+      valid: false,
+      error: `Command '${commandName}' is not in the allowed commands whitelist. Allowed: ${Array.from(ALLOWED_COMMANDS).join(", ")}`
+    };
+  }
+  const dangerousPatterns = [
+    /[;&|`$()]/,
+    // Shell metacharacters
+    /\.\./,
+    // Path traversal
+    /\/etc\//,
+    // System paths
+    /\/proc\//,
+    /\/sys\//
+  ];
+  for (const pattern of dangerousPatterns) {
+    if (pattern.test(command)) {
+      return {
+        valid: false,
+        error: `Command contains potentially dangerous pattern: ${pattern.toString()}`
+      };
+    }
+  }
+  return { valid: true };
+}
+function validateArgs(args) {
+  for (const arg of args) {
+    if (/[;&|`$()]/.test(arg) && !arg.startsWith("-")) {
+      return {
+        valid: false,
+        error: `Argument '${arg}' contains shell metacharacters`
+      };
+    }
+    if (arg.includes("..") && !arg.startsWith("-")) {
+      return {
+        valid: false,
+        error: `Argument '${arg}' contains path traversal`
+      };
+    }
+  }
+  return { valid: true };
+}
+function sanitizeEnv(env) {
+  const sanitized = {};
+  if (!env) return sanitized;
+  for (const [key, value] of Object.entries(env)) {
+    if (BLOCKED_ENV_VARS.has(key)) {
+      continue;
+    }
+    if (ALLOWED_ENV_VARS.has(key) || key.startsWith("OPENAI_") || key.startsWith("ANTHROPIC_") || key.startsWith("GOOGLE_") || key.startsWith("GEMINI_") || key.startsWith("MCP_")) {
+      sanitized[key] = value;
+    }
+  }
+  return sanitized;
+}
+var DEFAULT_TOOL_TIMEOUT_MS = 3e4;
+var MAX_TOOL_TIMEOUT_MS = 5 * 60 * 1e3;
+function validateTimeout(timeoutMs) {
+  if (timeoutMs === void 0) {
+    return DEFAULT_TOOL_TIMEOUT_MS;
+  }
+  if (timeoutMs <= 0) {
+    return DEFAULT_TOOL_TIMEOUT_MS;
+  }
+  return Math.min(timeoutMs, MAX_TOOL_TIMEOUT_MS);
+}
+
+// src/client/sdk-client.ts
 var CompatibleHTTPClientTransport = class extends import_streamableHttp.StreamableHTTPClientTransport {
   setProtocolVersion(version) {
   }
@@ -215,10 +335,24 @@ function createSdkClient(config) {
       });
       let transport;
       if (config.transport === "stdio") {
+        const commandValidation = validateCommand(config.command);
+        if (!commandValidation.valid) {
+          throw new Error(
+            `MCP Security: ${commandValidation.error}`
+          );
+        }
+        if (config.args) {
+          const argsValidation = validateArgs(config.args);
+          if (!argsValidation.valid) {
+            throw new Error(
+              `MCP Security: ${argsValidation.error}`
+            );
+          }
+        }
         transport = new import_stdio.StdioClientTransport({
           command: config.command,
           args: config.args,
-          env: config.env,
+          env: sanitizeEnv(config.env),
           cwd: config.cwd
         });
       } else if (config.transport === "http") {
@@ -254,11 +388,18 @@ function createSdkClient(config) {
         inputSchema: tool.inputSchema
       }));
     },
-    async callTool(name, args) {
+    async callTool(name, args, options) {
       if (!sdkClient || !isConnected) {
         throw new Error("Client not connected");
       }
-      const result = await sdkClient.callTool({ name, arguments: args });
+      const timeoutMs = validateTimeout(options?.timeoutMs);
+      const callPromise = sdkClient.callTool({ name, arguments: args });
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error(`MCP tool '${name}' timed out after ${timeoutMs}ms`));
+        }, timeoutMs);
+      });
+      const result = await Promise.race([callPromise, timeoutPromise]);
       return {
         content: result.content.map((c) => {
           if (c.type === "text") {

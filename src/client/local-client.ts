@@ -150,6 +150,7 @@ export function createLocalClient(config: McpServerConfigLocal): McpClient {
     async callTool(
       name: string,
       args: Record<string, unknown>,
+      _options?: { timeoutMs?: number },
     ): Promise<McpToolResult> {
       const tools = await ensureToolset();
       const tool = tools[name];

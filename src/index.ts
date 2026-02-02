@@ -76,6 +76,20 @@ export {
   getToolsByDomain,
 } from "./selection";
 
+// Security
+export {
+  ALLOWED_COMMANDS,
+  validateCommand,
+  validateArgs,
+  sanitizeEnv,
+  validateTimeout,
+  allowCommand,
+  isCommandAllowed,
+  DEFAULT_TOOL_TIMEOUT_MS,
+  MAX_TOOL_TIMEOUT_MS,
+  type SecurityValidationResult,
+} from "./security";
+
 // Re-export client and integration from subpaths
 // Users can also import directly from '@onegenui/mcp/client'
 // and '@onegenui/mcp/integration'

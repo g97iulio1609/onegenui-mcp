@@ -55,6 +55,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
+    "@onegenui/utils": "workspace:*",
     "zod-to-json-schema": "^3.24.0"
   },
   "devDependencies": {

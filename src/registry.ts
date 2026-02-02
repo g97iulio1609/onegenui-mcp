@@ -1,4 +1,5 @@
 import { readFileSync, existsSync, watch as fsWatch } from "fs";
+import { createLogger } from "@onegenui/utils";
 import type {
   McpServerConfig,
   McpServerState,
@@ -21,6 +22,8 @@ import {
 
 // Re-exports now come from registry/ directory
 // Use: import { resolveEnvVars, resolveServerEnv } from '@onegenui/mcp/registry'
+
+const mcpLogger = createLogger({ prefix: "mcp:registry" });
 
 /**
  * MCP Registry manages server configurations and their states.
@@ -93,7 +96,7 @@ export function createMcpRegistry(
       try {
         handler(event);
       } catch (error) {
-        console.error("Error in registry event handler:", error);
+        mcpLogger.error("Error in registry event handler:", error);
       }
     }
   }
@@ -253,7 +256,7 @@ export function createMcpRegistry(
             registry.add(serverConfig);
           }
         } catch (error) {
-          console.error(`Error processing server ${id}:`, error);
+          mcpLogger.error(`Error processing server ${id}:`, error);
         }
       }
 
@@ -278,18 +281,18 @@ export function createMcpRegistry(
       registry.stopWatching();
 
       if (!existsSync(path)) {
-        console.warn(
+        mcpLogger.warn(
           `Config file not found, watching will start when created: ${path}`,
         );
       }
 
       const watcher = fsWatch(path, { persistent: false }, (eventType) => {
         if (eventType === "change") {
-          console.log(`MCP config changed, reloading: ${path}`);
+          mcpLogger.log(`MCP config changed, reloading: ${path}`);
           try {
             registry.loadFromConfig(path);
           } catch (error) {
-            console.error("Error reloading config:", error);
+            mcpLogger.error("Error reloading config:", error);
           }
         }
       });

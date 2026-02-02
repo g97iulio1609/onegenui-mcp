@@ -1,7 +1,16 @@
 import {
+  ALLOWED_COMMANDS,
+  DEFAULT_TOOL_TIMEOUT_MS,
+  MAX_TOOL_TIMEOUT_MS,
+  allowCommand,
+  isCommandAllowed,
   resolveEnvVars,
-  resolveServerEnv
-} from "./chunk-VOMRNL7O.mjs";
+  resolveServerEnv,
+  sanitizeEnv,
+  validateArgs,
+  validateCommand,
+  validateTimeout
+} from "./chunk-P6ZLD7I5.mjs";
 
 // src/schema.ts
 import { zodToJsonSchema as zodToJsonSchemaLib } from "zod-to-json-schema";
@@ -261,6 +270,7 @@ function extractToolMetadata(tool) {
 
 // src/registry.ts
 import { readFileSync, existsSync, watch as fsWatch } from "fs";
+import { createLogger } from "@onegenui/utils";
 
 // src/registry/config-parser.ts
 function parseServerConfig(id, input) {
@@ -340,6 +350,7 @@ function computeMetadata(tools, serverDomain, serverTags) {
 }
 
 // src/registry.ts
+var mcpLogger = createLogger({ prefix: "mcp:registry" });
 function createMcpRegistry(options = {}) {
   const {
     configPath,
@@ -367,7 +378,7 @@ function createMcpRegistry(options = {}) {
       try {
         handler(event);
       } catch (error) {
-        console.error("Error in registry event handler:", error);
+        mcpLogger.error("Error in registry event handler:", error);
       }
     }
   }
@@ -490,7 +501,7 @@ function createMcpRegistry(options = {}) {
             registry.add(serverConfig);
           }
         } catch (error) {
-          console.error(`Error processing server ${id}:`, error);
+          mcpLogger.error(`Error processing server ${id}:`, error);
         }
       }
       const currentIdsArray = Array.from(currentIds);
@@ -510,17 +521,17 @@ function createMcpRegistry(options = {}) {
     watchConfig(path) {
       registry.stopWatching();
       if (!existsSync(path)) {
-        console.warn(
+        mcpLogger.warn(
           `Config file not found, watching will start when created: ${path}`
         );
       }
       const watcher = fsWatch(path, { persistent: false }, (eventType) => {
         if (eventType === "change") {
-          console.log(`MCP config changed, reloading: ${path}`);
+          mcpLogger.log(`MCP config changed, reloading: ${path}`);
           try {
             registry.loadFromConfig(path);
           } catch (error) {
-            console.error("Error reloading config:", error);
+            mcpLogger.error("Error reloading config:", error);
           }
         }
       });
@@ -965,6 +976,10 @@ function getToolsByDomain(serverStates, domain) {
   return tools;
 }
 export {
+  ALLOWED_COMMANDS,
+  DEFAULT_TOOL_TIMEOUT_MS,
+  MAX_TOOL_TIMEOUT_MS,
+  allowCommand,
   createMcpRegistry,
   defineMcpPrompt,
   defineMcpServer,
@@ -974,12 +989,17 @@ export {
   extractToolMetadata,
   getAllTools,
   getToolsByDomain,
+  isCommandAllowed,
   mergeSchemas,
   resolveEnvVars,
   resolveServerEnv,
+  sanitizeEnv,
   selectToolsForPrompt,
   toolFromWireFormat,
+  validateArgs,
+  validateCommand,
   validateMcpSchema,
+  validateTimeout,
   zodToMcpSchema
 };
 //# sourceMappingURL=index.mjs.map

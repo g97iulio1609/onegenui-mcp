@@ -20,6 +20,10 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // src/index.ts
 var index_exports = {};
 __export(index_exports, {
+  ALLOWED_COMMANDS: () => ALLOWED_COMMANDS,
+  DEFAULT_TOOL_TIMEOUT_MS: () => DEFAULT_TOOL_TIMEOUT_MS,
+  MAX_TOOL_TIMEOUT_MS: () => MAX_TOOL_TIMEOUT_MS,
+  allowCommand: () => allowCommand,
   createMcpRegistry: () => createMcpRegistry,
   defineMcpPrompt: () => defineMcpPrompt,
   defineMcpServer: () => defineMcpServer,
@@ -29,12 +33,17 @@ __export(index_exports, {
   extractToolMetadata: () => extractToolMetadata,
   getAllTools: () => getAllTools,
   getToolsByDomain: () => getToolsByDomain,
+  isCommandAllowed: () => isCommandAllowed,
   mergeSchemas: () => mergeSchemas,
   resolveEnvVars: () => resolveEnvVars,
   resolveServerEnv: () => resolveServerEnv,
+  sanitizeEnv: () => sanitizeEnv,
   selectToolsForPrompt: () => selectToolsForPrompt,
   toolFromWireFormat: () => toolFromWireFormat,
+  validateArgs: () => validateArgs,
+  validateCommand: () => validateCommand,
   validateMcpSchema: () => validateMcpSchema,
+  validateTimeout: () => validateTimeout,
   zodToMcpSchema: () => zodToMcpSchema
 });
 module.exports = __toCommonJS(index_exports);
@@ -297,6 +306,7 @@ function extractToolMetadata(tool) {
 
 // src/registry.ts
 var import_fs = require("fs");
+var import_utils = require("@onegenui/utils");
 
 // src/registry/config-parser.ts
 function parseServerConfig(id, input) {
@@ -376,6 +386,7 @@ function computeMetadata(tools, serverDomain, serverTags) {
 }
 
 // src/registry.ts
+var mcpLogger = (0, import_utils.createLogger)({ prefix: "mcp:registry" });
 function createMcpRegistry(options = {}) {
   const {
     configPath,
@@ -403,7 +414,7 @@ function createMcpRegistry(options = {}) {
       try {
         handler(event);
       } catch (error) {
-        console.error("Error in registry event handler:", error);
+        mcpLogger.error("Error in registry event handler:", error);
       }
     }
   }
@@ -526,7 +537,7 @@ function createMcpRegistry(options = {}) {
             registry.add(serverConfig);
           }
         } catch (error) {
-          console.error(`Error processing server ${id}:`, error);
+          mcpLogger.error(`Error processing server ${id}:`, error);
         }
       }
       const currentIdsArray = Array.from(currentIds);
@@ -546,17 +557,17 @@ function createMcpRegistry(options = {}) {
     watchConfig(path) {
       registry.stopWatching();
       if (!(0, import_fs.existsSync)(path)) {
-        console.warn(
+        mcpLogger.warn(
           `Config file not found, watching will start when created: ${path}`
         );
       }
       const watcher = (0, import_fs.watch)(path, { persistent: false }, (eventType) => {
         if (eventType === "change") {
-          console.log(`MCP config changed, reloading: ${path}`);
+          mcpLogger.log(`MCP config changed, reloading: ${path}`);
           try {
             registry.loadFromConfig(path);
           } catch (error) {
-            console.error("Error reloading config:", error);
+            mcpLogger.error("Error reloading config:", error);
           }
         }
       });
@@ -1044,8 +1055,137 @@ function getToolsByDomain(serverStates, domain) {
   }
   return tools;
 }
+
+// src/security.ts
+var ALLOWED_COMMANDS = /* @__PURE__ */ new Set([
+  // Node.js
+  "node",
+  "npx",
+  "npm",
+  "pnpm",
+  "yarn",
+  "bun",
+  // Python
+  "python",
+  "python3",
+  "pip",
+  "pip3",
+  "uv",
+  "uvx",
+  // Other common runtimes
+  "deno",
+  "go",
+  "ruby",
+  // MCP-specific
+  "mcp-server-fetch",
+  "mcp-server-filesystem",
+  "mcp-server-sqlite"
+]);
+var BLOCKED_ENV_VARS = /* @__PURE__ */ new Set([
+  "PATH",
+  // Prevent PATH manipulation
+  "LD_PRELOAD",
+  "LD_LIBRARY_PATH",
+  "DYLD_INSERT_LIBRARIES",
+  "DYLD_LIBRARY_PATH"
+]);
+var ALLOWED_ENV_VARS = /* @__PURE__ */ new Set([
+  "NODE_ENV",
+  "HOME",
+  "USER",
+  "LANG",
+  "LC_ALL",
+  "TZ",
+  "HTTP_PROXY",
+  "HTTPS_PROXY",
+  "NO_PROXY"
+  // API keys are allowed (user's responsibility)
+]);
+function validateCommand(command) {
+  const parts = command.split(/\s+/);
+  const baseCommand = parts[0] ?? "";
+  const pathParts = baseCommand.split("/");
+  const commandName = pathParts[pathParts.length - 1] ?? baseCommand;
+  if (!ALLOWED_COMMANDS.has(commandName)) {
+    return {
+      valid: false,
+      error: `Command '${commandName}' is not in the allowed commands whitelist. Allowed: ${Array.from(ALLOWED_COMMANDS).join(", ")}`
+    };
+  }
+  const dangerousPatterns = [
+    /[;&|`$()]/,
+    // Shell metacharacters
+    /\.\./,
+    // Path traversal
+    /\/etc\//,
+    // System paths
+    /\/proc\//,
+    /\/sys\//
+  ];
+  for (const pattern of dangerousPatterns) {
+    if (pattern.test(command)) {
+      return {
+        valid: false,
+        error: `Command contains potentially dangerous pattern: ${pattern.toString()}`
+      };
+    }
+  }
+  return { valid: true };
+}
+function validateArgs(args) {
+  for (const arg of args) {
+    if (/[;&|`$()]/.test(arg) && !arg.startsWith("-")) {
+      return {
+        valid: false,
+        error: `Argument '${arg}' contains shell metacharacters`
+      };
+    }
+    if (arg.includes("..") && !arg.startsWith("-")) {
+      return {
+        valid: false,
+        error: `Argument '${arg}' contains path traversal`
+      };
+    }
+  }
+  return { valid: true };
+}
+function sanitizeEnv(env) {
+  const sanitized = {};
+  if (!env) return sanitized;
+  for (const [key, value] of Object.entries(env)) {
+    if (BLOCKED_ENV_VARS.has(key)) {
+      continue;
+    }
+    if (ALLOWED_ENV_VARS.has(key) || key.startsWith("OPENAI_") || key.startsWith("ANTHROPIC_") || key.startsWith("GOOGLE_") || key.startsWith("GEMINI_") || key.startsWith("MCP_")) {
+      sanitized[key] = value;
+    }
+  }
+  return sanitized;
+}
+var DEFAULT_TOOL_TIMEOUT_MS = 3e4;
+var MAX_TOOL_TIMEOUT_MS = 5 * 60 * 1e3;
+function validateTimeout(timeoutMs) {
+  if (timeoutMs === void 0) {
+    return DEFAULT_TOOL_TIMEOUT_MS;
+  }
+  if (timeoutMs <= 0) {
+    return DEFAULT_TOOL_TIMEOUT_MS;
+  }
+  return Math.min(timeoutMs, MAX_TOOL_TIMEOUT_MS);
+}
+function allowCommand(command) {
+  ALLOWED_COMMANDS.add(command);
+}
+function isCommandAllowed(command) {
+  const commandName = command.split("/").pop() ?? command;
+  return ALLOWED_COMMANDS.has(commandName);
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
+  ALLOWED_COMMANDS,
+  DEFAULT_TOOL_TIMEOUT_MS,
+  MAX_TOOL_TIMEOUT_MS,
+  allowCommand,
   createMcpRegistry,
   defineMcpPrompt,
   defineMcpServer,
@@ -1055,12 +1195,17 @@ function getToolsByDomain(serverStates, domain) {
   extractToolMetadata,
   getAllTools,
   getToolsByDomain,
+  isCommandAllowed,
   mergeSchemas,
   resolveEnvVars,
   resolveServerEnv,
+  sanitizeEnv,
   selectToolsForPrompt,
   toolFromWireFormat,
+  validateArgs,
+  validateCommand,
   validateMcpSchema,
+  validateTimeout,
   zodToMcpSchema
 });
 //# sourceMappingURL=index.js.map
