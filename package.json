@@ -61,13 +61,13 @@
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
     "@types/node": "^25.0.9",
-    "ai": "^6.0.39",
+    "ai": "^6.0.68",
     "chokidar": "^4.0.0",
     "tsup": "^8.0.2",
     "typescript": "^5.4.5"
   },
   "peerDependencies": {
-    "ai": "^5.0.0 || ^6.0.0",
+    "ai": "^6.0.68",
     "zod": "^4.0.0"
   },
   "peerDependenciesMeta": {
