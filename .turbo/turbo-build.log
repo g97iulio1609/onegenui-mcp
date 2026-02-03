@@ -10,24 +10,24 @@ CLI Target: es2022
 CLI Cleaning output folder
 CJS Build start
 ESM Build start
+ESM dist/client/index.mjs          13.92 KB
+ESM dist/chunk-P6ZLD7I5.mjs        4.42 KB
+ESM dist/integration/index.mjs     5.31 KB
+ESM dist/index.mjs                 22.64 KB
+ESM dist/client/index.mjs.map      30.58 KB
+ESM dist/index.mjs.map             57.33 KB
+ESM dist/integration/index.mjs.map 13.50 KB
+ESM dist/chunk-P6ZLD7I5.mjs.map    9.49 KB
+ESM ⚡️ Build success in 61ms
 CJS dist/client/index.js          18.95 KB
 CJS dist/integration/index.js     6.70 KB
 CJS dist/index.js                 28.67 KB
 CJS dist/client/index.js.map      40.13 KB
 CJS dist/integration/index.js.map 13.96 KB
 CJS dist/index.js.map             69.08 KB
-CJS ⚡️ Build success in 30ms
-ESM dist/index.mjs                 22.64 KB
-ESM dist/client/index.mjs          13.92 KB
-ESM dist/chunk-P6ZLD7I5.mjs        4.42 KB
-ESM dist/integration/index.mjs     5.31 KB
-ESM dist/index.mjs.map             57.33 KB
-ESM dist/chunk-P6ZLD7I5.mjs.map    9.49 KB
-ESM dist/client/index.mjs.map      30.58 KB
-ESM dist/integration/index.mjs.map 13.50 KB
-ESM ⚡️ Build success in 31ms
+CJS ⚡️ Build success in 64ms
 DTS Build start
-DTS ⚡️ Build success in 2011ms
+DTS ⚡️ Build success in 2703ms
 DTS dist/index.d.ts                11.67 KB
 DTS dist/client/index.d.ts         439.00 B
 DTS dist/integration/index.d.ts    3.48 KB
