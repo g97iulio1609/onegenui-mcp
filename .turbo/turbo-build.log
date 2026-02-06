@@ -1,34 +1,33 @@
 
-
 > @onegenui/mcp@0.1.0 build /Users/giulioleone/Sviluppo/genUi/json-render/packages/mcp
 > tsup
 
-[34mCLI[39m Building entry: src/index.ts, src/client/index.ts, src/integration/index.ts
-[34mCLI[39m Using tsconfig: tsconfig.json
-[34mCLI[39m tsup v8.5.1
-[34mCLI[39m Using tsup config: /Users/giulioleone/Sviluppo/genUi/json-render/packages/mcp/tsup.config.ts
-[34mCLI[39m Target: es2022
-[34mCLI[39m Cleaning output folder
-[34mCJS[39m Build start
-[34mESM[39m Build start
-[32mCJS[39m [1mdist/index.js                 [22m[32m28.67 KB[39m
-[32mCJS[39m [1mdist/integration/index.js     [22m[32m6.70 KB[39m
-[32mCJS[39m [1mdist/client/index.js          [22m[32m18.95 KB[39m
-[32mCJS[39m [1mdist/integration/index.js.map [22m[32m13.96 KB[39m
-[32mCJS[39m [1mdist/index.js.map             [22m[32m69.08 KB[39m
-[32mCJS[39m [1mdist/client/index.js.map      [22m[32m40.13 KB[39m
-[32mCJS[39m ⚡️ Build success in 42ms
-[32mESM[39m [1mdist/index.mjs                 [22m[32m22.64 KB[39m
-[32mESM[39m [1mdist/integration/index.mjs     [22m[32m5.31 KB[39m
-[32mESM[39m [1mdist/client/index.mjs          [22m[32m13.92 KB[39m
-[32mESM[39m [1mdist/chunk-P6ZLD7I5.mjs        [22m[32m4.42 KB[39m
-[32mESM[39m [1mdist/index.mjs.map             [22m[32m57.33 KB[39m
-[32mESM[39m [1mdist/integration/index.mjs.map [22m[32m13.50 KB[39m
-[32mESM[39m [1mdist/chunk-P6ZLD7I5.mjs.map    [22m[32m9.49 KB[39m
-[32mESM[39m [1mdist/client/index.mjs.map      [22m[32m30.58 KB[39m
-[32mESM[39m ⚡️ Build success in 42ms
+CLI Building entry: src/index.ts, src/client/index.ts, src/integration/index.ts
+CLI Using tsconfig: tsconfig.json
+CLI tsup v8.5.1
+CLI Using tsup config: /Users/giulioleone/Sviluppo/genUi/json-render/packages/mcp/tsup.config.ts
+CLI Target: es2022
+CLI Cleaning output folder
+CJS Build start
+ESM Build start
+CJS dist/index.js                 28.67 KB
+CJS dist/client/index.js          21.34 KB
+CJS dist/integration/index.js     7.65 KB
+CJS dist/index.js.map             69.08 KB
+CJS dist/client/index.js.map      44.04 KB
+CJS dist/integration/index.js.map 15.69 KB
+CJS ⚡️ Build success in 57ms
+ESM dist/client/index.mjs          16.31 KB
+ESM dist/index.mjs                 22.64 KB
+ESM dist/integration/index.mjs     6.25 KB
+ESM dist/chunk-P6ZLD7I5.mjs        4.42 KB
+ESM dist/client/index.mjs.map      34.48 KB
+ESM dist/integration/index.mjs.map 15.23 KB
+ESM dist/chunk-P6ZLD7I5.mjs.map    9.49 KB
+ESM dist/index.mjs.map             57.33 KB
+ESM ⚡️ Build success in 58ms
 DTS Build start
-DTS ⚡️ Build success in 2256ms
+DTS ⚡️ Build success in 2395ms
 DTS dist/index.d.ts                11.67 KB
 DTS dist/client/index.d.ts         439.00 B
 DTS dist/integration/index.d.ts    3.48 KB
