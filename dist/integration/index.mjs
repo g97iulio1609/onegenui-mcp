@@ -1,6 +1,31 @@
 // src/integration/ai-sdk.ts
 import { tool, jsonSchema } from "ai";
 var DEBUG = process.env.NODE_ENV === "development";
+var DEFAULT_TOOL_TIMEOUT_MS = 45e3;
+var MIN_TOOL_TIMEOUT_MS = 5e3;
+var MAX_TOOL_TIMEOUT_MS = 3e5;
+function normalizeTimeout(timeoutMs) {
+  if (typeof timeoutMs !== "number" || !Number.isFinite(timeoutMs)) {
+    return DEFAULT_TOOL_TIMEOUT_MS;
+  }
+  return Math.min(MAX_TOOL_TIMEOUT_MS, Math.max(MIN_TOOL_TIMEOUT_MS, timeoutMs));
+}
+function withTimeout(promise, timeoutMs, timeoutMessage) {
+  let timeoutId = null;
+  return new Promise((resolve, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
+    promise.then(
+      (value) => {
+        if (timeoutId) clearTimeout(timeoutId);
+        resolve(value);
+      },
+      (error) => {
+        if (timeoutId) clearTimeout(timeoutId);
+        reject(error);
+      }
+    );
+  });
+}
 function convertToAiSdkSchema(mcpSchema) {
   return jsonSchema(mcpSchema);
 }
@@ -15,9 +40,13 @@ function createAiSdkTool(mcpTool, serverId, connectionManager) {
       if (DEBUG) console.log(`[MCP Tool] Calling: ${toolName}`, args);
       try {
         const client = await connectionManager.getClient(serverId);
-        const result = await client.callTool(
-          toolName,
-          args
+        const timeoutMs = normalizeTimeout(client.config.timeout);
+        const result = await withTimeout(
+          client.callTool(toolName, args, {
+            timeoutMs
+          }),
+          timeoutMs,
+          `MCP tool '${toolName}' timed out after ${timeoutMs}ms`
         );
         if (result.structuredContent !== void 0) {
           return result.structuredContent;

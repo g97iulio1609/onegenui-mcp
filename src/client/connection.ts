@@ -2,6 +2,35 @@ import type { McpRegistry } from "../registry";
 import type { McpConnectionConfig, McpServerState } from "../types";
 import { createMcpClient, type McpClient } from "./client";
 
+const DEFAULT_CONNECT_TIMEOUT_MS = 30000;
+const DEFAULT_REFRESH_TIMEOUT_MS = 20000;
+const DEFAULT_HEALTH_CHECK_TIMEOUT_MS = 15000;
+
+function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  timeoutMessage: string,
+): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  return new Promise((resolve, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(timeoutMessage));
+    }, timeoutMs);
+
+    promise.then(
+      (value) => {
+        if (timeoutId) clearTimeout(timeoutId);
+        resolve(value);
+      },
+      (error) => {
+        if (timeoutId) clearTimeout(timeoutId);
+        reject(error);
+      },
+    );
+  });
+}
+
 // =============================================================================
 // Connection Manager
 // =============================================================================
@@ -71,7 +100,9 @@ export function createConnectionManager(
   };
 
   const clients = new Map<string, McpClient>();
+  const pendingConnections = new Map<string, Promise<McpClient>>();
   let healthCheckInterval: ReturnType<typeof setInterval> | null = null;
+  let healthCheckInFlight = false;
 
   // Helper to update server state
   function updateState(
@@ -92,19 +123,31 @@ export function createConnectionManager(
     client: McpClient,
   ): Promise<void> {
     try {
-      const tools = await client.listTools();
+      const tools = await withTimeout(
+        client.listTools(),
+        DEFAULT_REFRESH_TIMEOUT_MS,
+        `Refreshing tools timed out for ${serverId}`,
+      );
       registry.setTools(serverId, tools);
 
       // Also refresh prompts and resources
       try {
-        const prompts = await client.listPrompts();
+        const prompts = await withTimeout(
+          client.listPrompts(),
+          DEFAULT_REFRESH_TIMEOUT_MS,
+          `Refreshing prompts timed out for ${serverId}`,
+        );
         registry.setPrompts(serverId, prompts);
       } catch {
         // Prompts might not be supported
       }
 
       try {
-        const resources = await client.listResources();
+        const resources = await withTimeout(
+          client.listResources(),
+          DEFAULT_REFRESH_TIMEOUT_MS,
+          `Refreshing resources timed out for ${serverId}`,
+        );
         registry.setResources(serverId, resources);
       } catch {
         // Resources might not be supported
@@ -122,6 +165,11 @@ export function createConnectionManager(
         return existing;
       }
 
+      const pending = pendingConnections.get(serverId);
+      if (pending) {
+        return pending;
+      }
+
       // Get server config
       const serverConfig = registry.getServer(serverId);
       if (!serverConfig) {
@@ -132,28 +180,41 @@ export function createConnectionManager(
         throw new Error(`Server ${serverId} is disabled`);
       }
 
-      // Create new client
-      const client = createMcpClient(serverConfig);
-      clients.set(serverId, client);
+      const connectPromise = (async (): Promise<McpClient> => {
+        const reusedClient = clients.get(serverId);
+        const client = reusedClient ?? createMcpClient(serverConfig);
+        clients.set(serverId, client);
 
-      // Update state
-      updateState(serverId, "connecting");
+        // Update state
+        updateState(serverId, "connecting");
 
+        try {
+          // Connect
+          await withTimeout(
+            client.connect(),
+            serverConfig.timeout ?? DEFAULT_CONNECT_TIMEOUT_MS,
+            `Connection timed out for ${serverId}`,
+          );
+          updateState(serverId, "connected");
+
+          // Refresh tools after connection
+          await refreshToolsForClient(serverId, client);
+
+          return client;
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          updateState(serverId, "error", errorMessage);
+          clients.delete(serverId);
+          throw error;
+        }
+      })();
+
+      pendingConnections.set(serverId, connectPromise);
       try {
-        // Connect
-        await client.connect();
-        updateState(serverId, "connected");
-
-        // Refresh tools after connection
-        await refreshToolsForClient(serverId, client);
-
-        return client;
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        updateState(serverId, "error", errorMessage);
-        clients.delete(serverId);
-        throw error;
+        return await connectPromise;
+      } finally {
+        pendingConnections.delete(serverId);
       }
     },
 
@@ -164,6 +225,7 @@ export function createConnectionManager(
 
     async disconnect(serverId: string): Promise<void> {
       const client = clients.get(serverId);
+      pendingConnections.delete(serverId);
       if (client) {
         try {
           await client.disconnect();
@@ -203,33 +265,56 @@ export function createConnectionManager(
 
       const interval = connectionConfig.healthCheckInterval ?? 60000;
 
-      healthCheckInterval = setInterval(async () => {
-        const entries = Array.from(clients.entries());
-        for (let i = 0; i < entries.length; i++) {
-          const entry = entries[i];
-          if (!entry) continue;
-          const [serverId, client] = entry;
-          if (!client.connected) {
-            // Try to reconnect
-            try {
-              await client.connect();
-              updateState(serverId, "connected");
-              await refreshToolsForClient(serverId, client);
-            } catch (error) {
-              const errorMessage =
-                error instanceof Error ? error.message : String(error);
-              updateState(serverId, "error", errorMessage);
-            }
-          } else {
-            // Verify connection is still alive by listing tools
-            try {
-              await client.listTools();
-            } catch {
-              updateState(serverId, "disconnected");
-              // Will reconnect on next health check or getClient call
+      healthCheckInterval = setInterval(() => {
+        if (healthCheckInFlight) return;
+        healthCheckInFlight = true;
+
+        void (async () => {
+          const entries = Array.from(clients.entries());
+          for (let i = 0; i < entries.length; i++) {
+            const entry = entries[i];
+            if (!entry) continue;
+            const [serverId, client] = entry;
+            const serverConfig = registry.getServer(serverId);
+            const timeoutMs =
+              serverConfig?.timeout ?? DEFAULT_HEALTH_CHECK_TIMEOUT_MS;
+
+            if (!client.connected) {
+              // Try to reconnect
+              try {
+                await withTimeout(
+                  client.connect(),
+                  timeoutMs,
+                  `Health-check reconnect timed out for ${serverId}`,
+                );
+                updateState(serverId, "connected");
+                await refreshToolsForClient(serverId, client);
+              } catch (error) {
+                const errorMessage =
+                  error instanceof Error ? error.message : String(error);
+                updateState(serverId, "error", errorMessage);
+              }
+            } else {
+              // Verify connection is still alive by listing tools
+              try {
+                await withTimeout(
+                  client.listTools(),
+                  timeoutMs,
+                  `Health-check listTools timed out for ${serverId}`,
+                );
+              } catch {
+                updateState(serverId, "disconnected");
+                // Will reconnect on next health check or getClient call
+              }
             }
           }
-        }
+        })()
+          .catch((error) => {
+            console.error("[MCP] Health check loop failed:", error);
+          })
+          .finally(() => {
+            healthCheckInFlight = false;
+          });
       }, interval);
     },
 

@@ -8,6 +8,39 @@ import { tool, jsonSchema, type ToolSet, type JSONSchema7 } from "ai";
 // =============================================================================
 
 const DEBUG = process.env.NODE_ENV === "development";
+const DEFAULT_TOOL_TIMEOUT_MS = 45000;
+const MIN_TOOL_TIMEOUT_MS = 5000;
+const MAX_TOOL_TIMEOUT_MS = 300000;
+
+function normalizeTimeout(timeoutMs: unknown): number {
+  if (typeof timeoutMs !== "number" || !Number.isFinite(timeoutMs)) {
+    return DEFAULT_TOOL_TIMEOUT_MS;
+  }
+  return Math.min(MAX_TOOL_TIMEOUT_MS, Math.max(MIN_TOOL_TIMEOUT_MS, timeoutMs));
+}
+
+function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  timeoutMessage: string,
+): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  return new Promise((resolve, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
+
+    promise.then(
+      (value) => {
+        if (timeoutId) clearTimeout(timeoutId);
+        resolve(value);
+      },
+      (error) => {
+        if (timeoutId) clearTimeout(timeoutId);
+        reject(error);
+      },
+    );
+  });
+}
 
 /**
  * Tool execution context.
@@ -48,11 +81,15 @@ function createAiSdkTool(
       try {
         // Get client (connects if needed)
         const client = await connectionManager.getClient(serverId);
+        const timeoutMs = normalizeTimeout(client.config.timeout);
 
         // Call the tool
-        const result = await client.callTool(
-          toolName,
-          args as Record<string, unknown>,
+        const result = await withTimeout(
+          client.callTool(toolName, args as Record<string, unknown>, {
+            timeoutMs,
+          }),
+          timeoutMs,
+          `MCP tool '${toolName}' timed out after ${timeoutMs}ms`,
         );
 
         // Return structured content if available

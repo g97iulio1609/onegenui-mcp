@@ -322,6 +322,27 @@ function createMcpClient(config) {
 }
 
 // src/client/connection.ts
+var DEFAULT_CONNECT_TIMEOUT_MS = 3e4;
+var DEFAULT_REFRESH_TIMEOUT_MS = 2e4;
+var DEFAULT_HEALTH_CHECK_TIMEOUT_MS = 15e3;
+function withTimeout(promise, timeoutMs, timeoutMessage) {
+  let timeoutId = null;
+  return new Promise((resolve, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(timeoutMessage));
+    }, timeoutMs);
+    promise.then(
+      (value) => {
+        if (timeoutId) clearTimeout(timeoutId);
+        resolve(value);
+      },
+      (error) => {
+        if (timeoutId) clearTimeout(timeoutId);
+        reject(error);
+      }
+    );
+  });
+}
 function createConnectionManager(registry, config) {
   const connectionConfig = {
     strategy: config?.strategy ?? registry.connectionConfig.strategy,
@@ -330,7 +351,9 @@ function createConnectionManager(registry, config) {
     reconnectAttempts: config?.reconnectAttempts ?? registry.connectionConfig.reconnectAttempts
   };
   const clients = /* @__PURE__ */ new Map();
+  const pendingConnections = /* @__PURE__ */ new Map();
   let healthCheckInterval = null;
+  let healthCheckInFlight = false;
   function updateState(serverId, status, error) {
     try {
       registry.setStatus(serverId, status, error);
@@ -339,15 +362,27 @@ function createConnectionManager(registry, config) {
   }
   async function refreshToolsForClient(serverId, client) {
     try {
-      const tools = await client.listTools();
+      const tools = await withTimeout(
+        client.listTools(),
+        DEFAULT_REFRESH_TIMEOUT_MS,
+        `Refreshing tools timed out for ${serverId}`
+      );
       registry.setTools(serverId, tools);
       try {
-        const prompts = await client.listPrompts();
+        const prompts = await withTimeout(
+          client.listPrompts(),
+          DEFAULT_REFRESH_TIMEOUT_MS,
+          `Refreshing prompts timed out for ${serverId}`
+        );
         registry.setPrompts(serverId, prompts);
       } catch {
       }
       try {
-        const resources = await client.listResources();
+        const resources = await withTimeout(
+          client.listResources(),
+          DEFAULT_REFRESH_TIMEOUT_MS,
+          `Refreshing resources timed out for ${serverId}`
+        );
         registry.setResources(serverId, resources);
       } catch {
       }
@@ -361,6 +396,10 @@ function createConnectionManager(registry, config) {
       if (existing?.connected) {
         return existing;
       }
+      const pending = pendingConnections.get(serverId);
+      if (pending) {
+        return pending;
+      }
       const serverConfig = registry.getServer(serverId);
       if (!serverConfig) {
         throw new Error(`Server ${serverId} not found in registry`);
@@ -368,19 +407,32 @@ function createConnectionManager(registry, config) {
       if (serverConfig.enabled === false) {
         throw new Error(`Server ${serverId} is disabled`);
       }
-      const client = createMcpClient(serverConfig);
-      clients.set(serverId, client);
-      updateState(serverId, "connecting");
+      const connectPromise = (async () => {
+        const reusedClient = clients.get(serverId);
+        const client = reusedClient ?? createMcpClient(serverConfig);
+        clients.set(serverId, client);
+        updateState(serverId, "connecting");
+        try {
+          await withTimeout(
+            client.connect(),
+            serverConfig.timeout ?? DEFAULT_CONNECT_TIMEOUT_MS,
+            `Connection timed out for ${serverId}`
+          );
+          updateState(serverId, "connected");
+          await refreshToolsForClient(serverId, client);
+          return client;
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          updateState(serverId, "error", errorMessage);
+          clients.delete(serverId);
+          throw error;
+        }
+      })();
+      pendingConnections.set(serverId, connectPromise);
       try {
-        await client.connect();
-        updateState(serverId, "connected");
-        await refreshToolsForClient(serverId, client);
-        return client;
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        updateState(serverId, "error", errorMessage);
-        clients.delete(serverId);
-        throw error;
+        return await connectPromise;
+      } finally {
+        pendingConnections.delete(serverId);
       }
     },
     isConnected(serverId) {
@@ -389,6 +441,7 @@ function createConnectionManager(registry, config) {
     },
     async disconnect(serverId) {
       const client = clients.get(serverId);
+      pendingConnections.delete(serverId);
       if (client) {
         try {
           await client.disconnect();
@@ -421,29 +474,47 @@ function createConnectionManager(registry, config) {
         return;
       }
       const interval = connectionConfig.healthCheckInterval ?? 6e4;
-      healthCheckInterval = setInterval(async () => {
-        const entries = Array.from(clients.entries());
-        for (let i = 0; i < entries.length; i++) {
-          const entry = entries[i];
-          if (!entry) continue;
-          const [serverId, client] = entry;
-          if (!client.connected) {
-            try {
-              await client.connect();
-              updateState(serverId, "connected");
-              await refreshToolsForClient(serverId, client);
-            } catch (error) {
-              const errorMessage = error instanceof Error ? error.message : String(error);
-              updateState(serverId, "error", errorMessage);
-            }
-          } else {
-            try {
-              await client.listTools();
-            } catch {
-              updateState(serverId, "disconnected");
+      healthCheckInterval = setInterval(() => {
+        if (healthCheckInFlight) return;
+        healthCheckInFlight = true;
+        void (async () => {
+          const entries = Array.from(clients.entries());
+          for (let i = 0; i < entries.length; i++) {
+            const entry = entries[i];
+            if (!entry) continue;
+            const [serverId, client] = entry;
+            const serverConfig = registry.getServer(serverId);
+            const timeoutMs = serverConfig?.timeout ?? DEFAULT_HEALTH_CHECK_TIMEOUT_MS;
+            if (!client.connected) {
+              try {
+                await withTimeout(
+                  client.connect(),
+                  timeoutMs,
+                  `Health-check reconnect timed out for ${serverId}`
+                );
+                updateState(serverId, "connected");
+                await refreshToolsForClient(serverId, client);
+              } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                updateState(serverId, "error", errorMessage);
+              }
+            } else {
+              try {
+                await withTimeout(
+                  client.listTools(),
+                  timeoutMs,
+                  `Health-check listTools timed out for ${serverId}`
+                );
+              } catch {
+                updateState(serverId, "disconnected");
+              }
             }
           }
-        }
+        })().catch((error) => {
+          console.error("[MCP] Health check loop failed:", error);
+        }).finally(() => {
+          healthCheckInFlight = false;
+        });
       }, interval);
     },
     stopHealthChecks() {
