@@ -1,4 +1,11 @@
 import {
+  MCP_APP_CATALOG,
+  getAllCatalogEntries,
+  getCatalogByCategory,
+  getCatalogEntry,
+  searchCatalog
+} from "./chunk-KS5JVMDU.mjs";
+import {
   ALLOWED_COMMANDS,
   DEFAULT_TOOL_TIMEOUT_MS,
   MAX_TOOL_TIMEOUT_MS,
@@ -979,6 +986,7 @@ export {
   ALLOWED_COMMANDS,
   DEFAULT_TOOL_TIMEOUT_MS,
   MAX_TOOL_TIMEOUT_MS,
+  MCP_APP_CATALOG,
   allowCommand,
   createMcpRegistry,
   defineMcpPrompt,
@@ -987,13 +995,17 @@ export {
   emptyInputSchema,
   extractSchemaMetadata,
   extractToolMetadata,
+  getAllCatalogEntries,
   getAllTools,
+  getCatalogByCategory,
+  getCatalogEntry,
   getToolsByDomain,
   isCommandAllowed,
   mergeSchemas,
   resolveEnvVars,
   resolveServerEnv,
   sanitizeEnv,
+  searchCatalog,
   selectToolsForPrompt,
   toolFromWireFormat,
   validateArgs,

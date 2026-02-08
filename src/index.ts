@@ -93,3 +93,18 @@ export {
 // Re-export client and integration from subpaths
 // Users can also import directly from '@onegenui/mcp/client'
 // and '@onegenui/mcp/integration'
+
+// Catalog
+export type {
+  McpAppCatalogEntry,
+  McpAppCategory,
+  McpAppOAuthConfig,
+} from "./catalog/types";
+
+export {
+  MCP_APP_CATALOG,
+  getAllCatalogEntries,
+  getCatalogEntry,
+  getCatalogByCategory,
+  searchCatalog,
+} from "./catalog/registry";

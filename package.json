@@ -42,6 +42,11 @@
       "types": "./dist/integration/index.d.ts",
       "import": "./dist/integration/index.mjs",
       "require": "./dist/integration/index.js"
+    },
+    "./catalog": {
+      "types": "./dist/catalog/index.d.ts",
+      "import": "./dist/catalog/index.mjs",
+      "require": "./dist/catalog/index.js"
     }
   },
   "files": [

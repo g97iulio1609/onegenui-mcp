@@ -23,6 +23,7 @@ __export(index_exports, {
   ALLOWED_COMMANDS: () => ALLOWED_COMMANDS,
   DEFAULT_TOOL_TIMEOUT_MS: () => DEFAULT_TOOL_TIMEOUT_MS,
   MAX_TOOL_TIMEOUT_MS: () => MAX_TOOL_TIMEOUT_MS,
+  MCP_APP_CATALOG: () => MCP_APP_CATALOG,
   allowCommand: () => allowCommand,
   createMcpRegistry: () => createMcpRegistry,
   defineMcpPrompt: () => defineMcpPrompt,
@@ -31,13 +32,17 @@ __export(index_exports, {
   emptyInputSchema: () => emptyInputSchema,
   extractSchemaMetadata: () => extractSchemaMetadata,
   extractToolMetadata: () => extractToolMetadata,
+  getAllCatalogEntries: () => getAllCatalogEntries,
   getAllTools: () => getAllTools,
+  getCatalogByCategory: () => getCatalogByCategory,
+  getCatalogEntry: () => getCatalogEntry,
   getToolsByDomain: () => getToolsByDomain,
   isCommandAllowed: () => isCommandAllowed,
   mergeSchemas: () => mergeSchemas,
   resolveEnvVars: () => resolveEnvVars,
   resolveServerEnv: () => resolveServerEnv,
   sanitizeEnv: () => sanitizeEnv,
+  searchCatalog: () => searchCatalog,
   selectToolsForPrompt: () => selectToolsForPrompt,
   toolFromWireFormat: () => toolFromWireFormat,
   validateArgs: () => validateArgs,
@@ -1180,11 +1185,123 @@ function isCommandAllowed(command) {
   const commandName = command.split("/").pop() ?? command;
   return ALLOWED_COMMANDS.has(commandName);
 }
+
+// src/catalog/registry.ts
+var MCP_APP_CATALOG = [
+  {
+    id: "github",
+    name: "GitHub",
+    description: "Access repositories, issues, pull requests, and code search. Manage your GitHub workflow directly through AI.",
+    icon: "github",
+    category: "development",
+    transport: "stdio",
+    configTemplate: {
+      transport: "stdio",
+      name: "GitHub",
+      command: "npx",
+      args: ["-y", "@modelcontextprotocol/server-github"],
+      env: { GITHUB_PERSONAL_ACCESS_TOKEN: "" },
+      domain: "vcs",
+      tags: ["git", "github", "code", "repository", "issues", "pull-requests"]
+    },
+    requiredEnvVars: ["GITHUB_PERSONAL_ACCESS_TOKEN"],
+    oauthConfig: {
+      authUrl: "https://github.com/login/oauth/authorize",
+      tokenUrl: "https://github.com/login/oauth/access_token",
+      scopes: ["repo", "read:org"]
+    }
+  },
+  {
+    id: "filesystem",
+    name: "Filesystem",
+    description: "Read, write, and manage files on your local filesystem. Navigate directories, search for files, and edit content.",
+    icon: "folder",
+    category: "filesystem",
+    transport: "stdio",
+    configTemplate: {
+      transport: "stdio",
+      name: "Filesystem",
+      command: "npx",
+      args: ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
+      domain: "files",
+      tags: ["files", "filesystem", "directory", "read", "write"]
+    },
+    requiredEnvVars: []
+  },
+  {
+    id: "sqlite",
+    name: "SQLite",
+    description: "Query and manage SQLite databases. Run SQL queries, inspect schemas, and perform data analysis on local databases.",
+    icon: "database",
+    category: "data",
+    transport: "stdio",
+    configTemplate: {
+      transport: "stdio",
+      name: "SQLite",
+      command: "npx",
+      args: ["-y", "@modelcontextprotocol/server-sqlite", ""],
+      domain: "data",
+      tags: ["database", "sql", "sqlite", "query", "data"]
+    },
+    requiredEnvVars: []
+  },
+  {
+    id: "brave-search",
+    name: "Brave Search",
+    description: "Search the web using the Brave Search API. Get real-time search results, news, and web content for research.",
+    icon: "search",
+    category: "productivity",
+    transport: "stdio",
+    configTemplate: {
+      transport: "stdio",
+      name: "Brave Search",
+      command: "npx",
+      args: ["-y", "@modelcontextprotocol/server-brave-search"],
+      env: { BRAVE_API_KEY: "" },
+      domain: "web",
+      tags: ["search", "web", "brave", "internet", "research"]
+    },
+    requiredEnvVars: ["BRAVE_API_KEY"]
+  },
+  {
+    id: "fetch",
+    name: "Fetch",
+    description: "Fetch and extract content from any URL. Retrieve web pages, APIs, and online resources for analysis.",
+    icon: "globe",
+    category: "productivity",
+    transport: "stdio",
+    configTemplate: {
+      transport: "stdio",
+      name: "Fetch",
+      command: "npx",
+      args: ["-y", "@modelcontextprotocol/server-fetch"],
+      domain: "web",
+      tags: ["fetch", "http", "url", "web", "api", "scrape"]
+    },
+    requiredEnvVars: []
+  }
+];
+function getAllCatalogEntries() {
+  return MCP_APP_CATALOG;
+}
+function getCatalogEntry(id) {
+  return MCP_APP_CATALOG.find((entry) => entry.id === id);
+}
+function getCatalogByCategory(category) {
+  return MCP_APP_CATALOG.filter((entry) => entry.category === category);
+}
+function searchCatalog(query) {
+  const lower = query.toLowerCase();
+  return MCP_APP_CATALOG.filter(
+    (entry) => entry.name.toLowerCase().includes(lower) || entry.description.toLowerCase().includes(lower)
+  );
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   ALLOWED_COMMANDS,
   DEFAULT_TOOL_TIMEOUT_MS,
   MAX_TOOL_TIMEOUT_MS,
+  MCP_APP_CATALOG,
   allowCommand,
   createMcpRegistry,
   defineMcpPrompt,
@@ -1193,13 +1310,17 @@ function isCommandAllowed(command) {
   emptyInputSchema,
   extractSchemaMetadata,
   extractToolMetadata,
+  getAllCatalogEntries,
   getAllTools,
+  getCatalogByCategory,
+  getCatalogEntry,
   getToolsByDomain,
   isCommandAllowed,
   mergeSchemas,
   resolveEnvVars,
   resolveServerEnv,
   sanitizeEnv,
+  searchCatalog,
   selectToolsForPrompt,
   toolFromWireFormat,
   validateArgs,
