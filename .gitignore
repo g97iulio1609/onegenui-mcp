@@ -1,42 +1,40 @@
 # Dependencies
-node_modules
-.pnp
-.pnp.js
+node_modules/
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
 
-# Local env files
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Testing
-coverage
-
-# Turbo
-.turbo
-
-# Vercel
-.vercel
-
-# Build Outputs
+# Build outputs
+dist/
+build/
+.turbo/
 .next/
 out/
-build
-dist
+*.tsbuildinfo
 
-# Debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
+# Development
+.env.local
+.env.*.local
+.env.development.local
 *.log
 logs/
 
-# Misc
-.DS_Store
-*.pem
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
 
-# TypeScript
-*.tsbuildinfo
-*.log
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage/
+.nyc_output/
+*.lcov
+
+# Misc
+.cache/
+tmp/
+temp/
