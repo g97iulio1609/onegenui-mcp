@@ -73,10 +73,14 @@
   },
   "peerDependencies": {
     "ai": "^6.0.68",
-    "zod": "^4.0.0"
+    "zod": "^4.0.0",
+    "@onegenui/deep-agents": "workspace:*"
   },
   "peerDependenciesMeta": {
     "ai": {
+      "optional": true
+    },
+    "@onegenui/deep-agents": {
       "optional": true
     }
   }

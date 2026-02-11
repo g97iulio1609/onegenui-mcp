@@ -14,3 +14,5 @@ export {
   generateServerStatusPrompt,
   type ServerStatusPromptOptions,
 } from "./prompt";
+
+export { createMcpExecutor } from "./deep-agents";
